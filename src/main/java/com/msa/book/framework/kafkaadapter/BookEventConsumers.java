@@ -23,8 +23,8 @@ public class BookEventConsumers {
     private final MakeAvailableUsecase makeAvailableUsecase;
     private final MakeUnAvailableUsecase makeUnavailable;
     private final BookEventProducer eventProducer;
-
-    @KafkaListener(topics = "${consumer.topic1.name}", groupId = "${consumer.groupid.name}")
+    
+    @KafkaListener(topics = "${kafka.topics.consumer.rental-rent}", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeRental(ConsumerRecord<String, String> record) throws IOException {
         System.out.printf("rental_rent:" + record.value());
         ItemRented itemRented = objectMapper.readValue(record.value(), ItemRented.class);
@@ -49,7 +49,7 @@ public class BookEventConsumers {
         eventProducer.occurEvent(eventResult);
     }
 
-    @KafkaListener(topics = "${consumer.topic2.name}", groupId = "${consumer.groupid.name}")
+    @KafkaListener(topics = "${kafka.topics.consumer.rental-return}", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeReturn(ConsumerRecord<String, String> record) throws IOException {
         ItemReturned itemReturned = objectMapper.readValue(record.value(), ItemReturned.class);
 
