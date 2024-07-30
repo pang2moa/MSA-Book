@@ -45,19 +45,13 @@ pipeline {
                     def jarFile = findFiles(glob: 'target/*.jar')[0]
                     
                     // 기존 프로세스 종료
-                    sshagent(['your-ssh-credentials-id']) {
-                        sh "ssh ${SERVER_USER}@${SERVER_IP} 'pkill -f ${APP_NAME} || true'"
-                    }
+                    sh "pkill -f ${APP_NAME} || true"
                     
-                    // 새 JAR 파일 전송
-                    sshagent(['your-ssh-credentials-id']) {
-                        sh "scp ${jarFile.path} ${SERVER_USER}@${SERVER_IP}:${DEPLOY_PATH}/${APP_NAME}.jar"
-                    }
+                    // 새 JAR 파일 복사
+                    sh "cp ${jarFile.path} ${DEPLOY_PATH}/${APP_NAME}.jar"
                     
                     // 새 프로세스 시작
-                    sshagent(['your-ssh-credentials-id']) {
-                        sh "ssh ${SERVER_USER}@${SERVER_IP} 'nohup java -jar ${DEPLOY_PATH}/${APP_NAME}.jar > ${DEPLOY_PATH}/${APP_NAME}.log 2>&1 &'"
-                    }
+                    sh "nohup java -jar ${DEPLOY_PATH}/${APP_NAME}.jar > ${DEPLOY_PATH}/${APP_NAME}.log 2>&1 &"
                 }
             }
         }
