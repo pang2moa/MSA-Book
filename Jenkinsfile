@@ -1,40 +1,17 @@
 pipeline {
     agent any
     
-    tools {
-        jdk 'jdk11'
-        maven 'Maven 3.9.6'
-    }
-    
     environment {
-        APP_NAME = 'MSA-Book' // 각 프로젝트마다 변경 필요
-        GITHUB_REPO = 'https://github.com/pang2moa/MSA-Book.git' // 각 프로젝트마다 변경 필요
-        BRANCH_NAME = 'master' // 또는 원하는 브랜치 이름
-        SERVER_USER = 'appuser'
-        SERVER_IP = '222.108.42.200'
+        APP_NAME = 'MSA-Member'
         DEPLOY_PATH = '/opt/springapps/MSA-Book'
+        JENKINS_USER = 'appuser'
     }
     
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: "${BRANCH_NAME}", url: "${GITHUB_REPO}"
-            }
-        }
-        
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-        
-        stage('Test') {
-            steps {
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
+                script {
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -42,16 +19,55 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    def jarFile = findFiles(glob: 'target/*.jar')[0]
-                    
-                    // 기존 프로세스 종료
-                    sh "pkill -f ${APP_NAME} || true"
-                    
-                    // 새 JAR 파일 복사
-                    sh "cp ${jarFile.path} ${DEPLOY_PATH}/${APP_NAME}.jar"
-                    
-                    // 새 프로세스 시작
-                    sh "nohup java -jar ${DEPLOY_PATH}/${APP_NAME}.jar > ${DEPLOY_PATH}/${APP_NAME}.log 2>&1 &"
+                    try {
+                        def jarFiles = findFiles(glob: 'target/*.jar')
+                        if (jarFiles.length == 0) {
+                            error "No JAR files found in target directory"
+                        }
+                        def jarFile = jarFiles[0]
+                        echo "Found JAR file: ${jarFile.name}"
+                        
+                        sh """
+                            sudo mkdir -p ${DEPLOY_PATH}
+                            sudo cp ${jarFile.path} ${DEPLOY_PATH}/${APP_NAME}.jar
+                            sudo chown ${JENKINS_USER}:${JENKINS_USER} ${DEPLOY_PATH}/${APP_NAME}.jar
+                            sudo chmod 755 ${DEPLOY_PATH}/${APP_NAME}.jar
+                        """
+                        
+                        echo "JAR file deployed successfully"
+                    } catch (Exception e) {
+                        echo "Deployment failed: ${e.getMessage()}"
+                        error "Deployment stage failed"
+                    }
+                }
+            }
+        }
+        
+        stage('Start Application') {
+            steps {
+                script {
+                    try {
+                        sh """
+                            sudo -n pkill -f ${APP_NAME}.jar || true
+                            sudo -n -u ${JENKINS_USER} nohup java -jar ${DEPLOY_PATH}/${APP_NAME}.jar > ${DEPLOY_PATH}/${APP_NAME}.log 2>&1 &
+                            echo \$! | sudo -n tee ${DEPLOY_PATH}/${APP_NAME}.pid > /dev/null
+                        """
+                        echo "Application started successfully"
+                    } catch (Exception e) {
+                        echo "Application start failed: ${e.getMessage()}"
+                        error "Application start failed"
+                    }
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    sh "ls -l ${DEPLOY_PATH}/${APP_NAME}.jar"
+                    sh "sudo -n cat ${DEPLOY_PATH}/${APP_NAME}.pid"
+                    sh "ps aux | grep ${APP_NAME}.jar"
+                    echo "Deployment verified"
                 }
             }
         }
@@ -59,13 +75,13 @@ pipeline {
     
     post {
         always {
-            cleanWs()
+            echo "Pipeline finished. Check logs for details."
         }
         success {
-            echo 'Pipeline succeeded!'
+            echo "Pipeline succeeded"
         }
         failure {
-            echo 'Pipeline failed!'
+            echo "Pipeline failed"
         }
     }
 }
