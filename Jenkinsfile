@@ -31,6 +31,7 @@ pipeline {
                             sudo mkdir -p ${DEPLOY_PATH}
                             sudo cp ${jarFile.path} ${DEPLOY_PATH}/${APP_NAME}.jar
                             sudo chown ${JENKINS_USER}:${JENKINS_USER} ${DEPLOY_PATH}/${APP_NAME}.jar
+                            sudo chown ${JENKINS_USER}:${JENKINS_USER} ${DEPLOY_PATH}
                             sudo chmod 755 ${DEPLOY_PATH}/${APP_NAME}.jar
                         """
                         
@@ -51,6 +52,7 @@ pipeline {
                             sudo -n pkill -f ${APP_NAME}.jar || true
                             sudo -n -u ${JENKINS_USER} nohup java -jar ${DEPLOY_PATH}/${APP_NAME}.jar > ${DEPLOY_PATH}/${APP_NAME}.log 2>&1 &
                             echo \$! | sudo -n tee ${DEPLOY_PATH}/${APP_NAME}.pid > /dev/null
+                            sudo chown ${JENKINS_USER}:${JENKINS_USER} ${DEPLOY_PATH}/${APP_NAME}.pid
                         """
                         echo "Application started successfully"
                     } catch (Exception e) {
