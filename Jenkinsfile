@@ -9,7 +9,7 @@ pipeline {
     environment {
         APP_NAME = 'MSA-Book' // 각 프로젝트마다 변경 필요
         GITHUB_REPO = 'https://github.com/pang2moa/MSA-Book.git' // 각 프로젝트마다 변경 필요
-        BRANCH_NAME = 'main' // 또는 원하는 브랜치 이름
+        BRANCH_NAME = 'master' // 또는 원하는 브랜치 이름
         SERVER_USER = 'appuser'
         SERVER_IP = '222.108.42.200'
         DEPLOY_PATH = '/opt/springapps/MSA-Book'
